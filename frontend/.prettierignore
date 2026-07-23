@@ -1,0 +1,22 @@
+# Build output
+dist
+dist-ssr
+build
+coverage
+
+# Dependencies
+node_modules
+
+# Generated
+*.tsbuildinfo
+routeTree.gen.ts
+
+# Lockfiles
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Misc
+.env
+.env.*
+!.env.example

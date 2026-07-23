@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "wait-on": "^9.0.10"
+  }
+}

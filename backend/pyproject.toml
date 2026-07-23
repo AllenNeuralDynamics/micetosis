@@ -1,0 +1,45 @@
+
+[project]
+name = "web-ui-backend"
+version = "0.1.0"
+readme = "README.md"
+description = "FastApi layer for React app."
+requires-python = ">=3.12"
+dependencies = [
+    "zmq==0.0.0",
+    "uvicorn==0.35.0",
+    "pydantic>=2.11.7",
+    "fastapi[standard]>=0.128.0",
+    "aiortc>=1.13.0",
+    "one-liner",
+    "opencv-python>=4.13.0.92",
+    "tornado>=6.5.4",
+    "jsonref>=1.1.0",
+]
+
+[dependency-groups]
+dev = ["ruff", "mypy"]
+
+[build-system]
+requires = ["uv_build>=0.8.22"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["C901"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+
+[tool.uv.sources]
+one-liner = { git = "https://github.com/AllenNeuralDynamics/one-liner.git", branch = "feat-rpc-schema" }
+
+[tool.uv.build-backend]
+source-include = ["src/web_ui_backend/dist/**"]

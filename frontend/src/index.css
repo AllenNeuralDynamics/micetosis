@@ -1,0 +1,11 @@
+@import './font.css';
+
+@layer theme, base, mantine, components, utilities;
+
+@import 'tailwindcss';
+@import '@mantine/core/styles.layer.css';
+
+@theme {
+  --font-sans: 'Allen Institute Plus Text', sans-serif;
+  --font-display: 'Allen Institute Plus Headline', sans-serif;
+}

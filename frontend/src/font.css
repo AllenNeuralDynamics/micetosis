@@ -1,0 +1,158 @@
+/* ============================================================
+   Allen Institute Plus — font-face declarations
+   Import once (e.g. `@import './fonts.css';` in index.css).
+   Files expected at: public/fonts/
+
+   Weight map (both families):
+     Light 300 · Regular 400 · Medium 500 · Semibold 600 · Bold 700
+
+   Usage:
+     - "Allen Institute Plus Text"     -> body text
+     - "Allen Institute Plus Headline" -> headings / display
+   ============================================================ */
+
+/* ---------- Allen Institute Plus Text (body) ---------- */
+
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-LightItalic.woff2') format('woff2');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-MediumItalic.woff2') format('woff2');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-SemiboldItalic.woff2') format('woff2');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Text';
+  src: url('/fonts/AllenInstitutePlusText-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ---------- Allen Institute Plus Headline (display) ---------- */
+
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-LightItalic.woff2') format('woff2');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-MediumItalic.woff2') format('woff2');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-SemiboldItalic.woff2') format('woff2');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Allen Institute Plus Headline';
+  src: url('/fonts/AllenInstitutePlusHeadline-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}

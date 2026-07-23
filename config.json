@@ -1,0 +1,11 @@
+{
+  "ui": {
+    "title": "Micetosis Template",
+    "rpcs_endpoint": "/api/metadata/rpcs",
+    "streams_endpoint": "/api/metadata/streams"
+  },
+  "server": {
+    "url": "http://127.0.0.1",
+    "port": "8000"
+  }
+}
