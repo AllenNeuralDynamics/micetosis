@@ -27,6 +27,9 @@ dist-ssr
 *routeTree.gen.ts
 .tanstack
 
+# One-liner generated types
+one-liner-router/generated/
+
 # Python
 *.venv
 *.ruff_cache
