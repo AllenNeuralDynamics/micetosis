@@ -19,8 +19,11 @@ export type RPCsMetadata = z.infer<typeof RPCsMetadataSchema>;
 
 export const StreamMetadataSchema = z.object({
   name: z.string(),
+  encoding: z.string(),
+  route: z.string(),
+  params_schema: z.record(z.string(), z.unknown()).nullish(),
+  return_schema: z.record(z.string(), z.unknown()).nullish(),
   description: z.string().nullish(),
-  schema: z.record(z.string(), z.unknown()).nullish(),
 });
 export type StreamMetadata = z.infer<typeof StreamMetadataSchema>;
 export const StreamsMetadataSchema = z.record(z.string(), StreamMetadataSchema);

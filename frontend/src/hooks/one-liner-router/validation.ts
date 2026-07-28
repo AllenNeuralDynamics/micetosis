@@ -1,6 +1,6 @@
 import addFormats from 'ajv-formats';
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
-import type { RPCMetadata } from './registry.ts';
+import type { RPCMetadata } from './metadata.ts';
 
 // --------------------------------------------------------------------------------
 //  Constants

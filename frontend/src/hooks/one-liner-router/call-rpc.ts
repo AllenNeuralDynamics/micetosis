@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import type { RPCMetadata } from './registry.ts';
-import { useRPCsMetadata } from './registry.ts';
+import type { RPCMetadata } from './metadata.ts';
+import { useRPCsMetadata } from './metadata.ts';
 import { assertParamsValid } from './validation.ts';
 
 // --------------------------------------------------------------------------------

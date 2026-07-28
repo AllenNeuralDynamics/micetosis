@@ -10,11 +10,11 @@ export { useRPCAction as useDynamicRPCAction, useRPCData as useDynamicRPCData } 
 export { RPCFetchError, RPCHttpError, RPCNetworkError, RPCNotFoundError } from './call-rpc';
 
 // Registry hooks + parameter validation error
-export { useRPCsMetadata, useStreamsMetadata } from './registry';
+export { useRPCsMetadata, useStreamsMetadata } from './metadata';
 export { RPCParamsError } from './validation';
 
 // Metadata types
-export type { RPCMetadata, RPCsMetadata, StreamMetadata, StreamsMetadata } from './registry';
+export type { RPCMetadata, RPCsMetadata, StreamMetadata, StreamsMetadata } from './metadata';
 
 // Generated endpoint types (handy if a consumer wants to name a param/result type)
 export type { RPCEndpoints, RPCName } from './generated/endpoints';
