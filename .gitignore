@@ -28,7 +28,7 @@ dist-ssr
 .tanstack
 
 # One-liner generated types
-one-liner-router/generated/
+**/one-liner-router/generated/
 
 # Python
 *.venv
