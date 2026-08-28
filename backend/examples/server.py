@@ -40,8 +40,12 @@ class MiceCloningMachine(BaseModel):
         return f"Failed to clone {mouse} - not in original mice list."
 
     # Function that where type hint is a complex model (pydantic BaseModel)
-    def get_manufacturer_info(self) -> Manufacturer:
-        return self.manufacturer
+    def get_manufacturer_info(self):
+        return self.manufacturer.model_dump()
+
+    # Function to demonstrate a server side error.
+    def get_faulty_machine_info(self):
+        raise Exception("This machine is faulty.")
 
 
 ################################################################################
@@ -64,8 +68,13 @@ def the_perpetual_dice_roller() -> int:
 
 
 if __name__ == "__main__":
-    clone_machine = MiceCloningMachine(original_mice=["Mickey", "Minnie", "JangoFett"])
-    server = RouterServer(instances={"clone_machine": clone_machine})
+    clone_machine_1 = MiceCloningMachine(original_mice=["Mickey", "Minnie", "JangoFett"])
+    clone_machine_2 = MiceCloningMachine(original_mice=["Mickey", "Minnie", "JangoFett"])
+    clone_machine_2.manufacturer = Manufacturer(name="Cloner", location="Urf", model_number="1212")
+
+    server = RouterServer(
+        instances={"clone_machine": clone_machine_1, "clone_machine_2": clone_machine_2}
+    )
 
     # Add RPCs
     print("Adding rpcs...")
@@ -89,6 +98,37 @@ if __name__ == "__main__":
         "get_manufacturer_info",
         "clone_machine",
         "get_manufacturer_info",
+    )
+    server.add_named_call(
+        "get_faulty_machine_info",
+        "clone_machine",
+        "get_faulty_machine_info",
+    )
+
+    server.add_named_call(
+        "clone_mice_2",
+        "clone_machine_2",
+        "clone_mice",
+    )
+    server.add_named_call(
+        "check_clone_count_2",
+        "clone_machine_2",
+        "check_clone_count",
+    )
+    server.add_named_call(
+        "execute_order_67_2",
+        "clone_machine_2",
+        "execute_order_67",
+    )
+    server.add_named_call(
+        "get_manufacturer_info_2",
+        "clone_machine_2",
+        "get_manufacturer_info",
+    )
+    server.add_named_call(
+        "get_faulty_machine_info_2",
+        "clone_machine_2",
+        "get_faulty_machine_info",
     )
 
     # Add streams

@@ -5,9 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "predev": "wait-on -t 60000 http-get://localhost:8000/api/metadata/rpcs && npm run gen:rpc",
-    "prebuild": "npm run gen:rpc",
-    "gen:rpc": "node scripts/generate-rpc-types.mjs --url http://localhost:8000/api/metadata/rpcs --out src/hooks/one-liner-router/generated/",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",

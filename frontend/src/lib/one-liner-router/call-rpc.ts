@@ -1,48 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { RPCHttpError, RPCNetworkError, RPCNotFoundError, RPCParamsError } from './errors.ts';
 import type { RPCMetadata } from './metadata.ts';
 import { useRPCsMetadata } from './metadata.ts';
-import { assertParamsValid } from './validation.ts';
-
-// --------------------------------------------------------------------------------
-//  Errors
-// --------------------------------------------------------------------------------
-
-// Thrown when the requested RPC name is not present in the registry metadata.
-export class RPCNotFoundError extends Error {
-  constructor(rpcName: string) {
-    super(`RPC function "${rpcName}" not found`);
-    this.name = 'RPCNotFoundError';
-  }
-}
-
-// Base class for any generic fetching failure when calling an RPC endpoint. Not thrown directly
-export class RPCFetchError extends Error {
-  constructor(rpcName: string, message: string, cause?: unknown) {
-    super(`RPC "${rpcName}" failed: ${message}`);
-    this.name = 'RPCFetchError';
-    if (cause !== undefined) (this as Error & { cause?: unknown }).cause = cause;
-  }
-}
-
-// Thrown when the request cannot reach the backend at all (network error)
-export class RPCNetworkError extends RPCFetchError {
-  constructor(rpcName: string, cause: unknown) {
-    super(rpcName, 'could not reach backend', cause);
-    this.name = 'RPCNetworkError';
-  }
-}
-
-// Thrown when the backend responded with a non-2xx status.
-export class RPCHttpError extends RPCFetchError {
-  readonly status: number;
-  readonly body: string;
-  constructor(rpcName: string, status: number, body: string) {
-    super(rpcName, `HTTP ${status}: ${body}`);
-    this.name = 'RPCHttpError';
-    this.status = status;
-    this.body = body;
-  }
-}
+import { assertParamsValid } from './validate-params.ts';
 
 // --------------------------------------------------------------------------------
 //  API
@@ -67,8 +27,13 @@ async function callRPC(name: string, route: string, params: unknown): Promise<un
     // Network Error
     throw new RPCNetworkError(name, cause);
   }
-  // HTTP Error
-  if (!res.ok) throw new RPCHttpError(name, res.status, await res.text());
+  if (!res.ok) {
+    const body = await res.text();
+    if (res.status === 404) throw new RPCNotFoundError(name);
+    // 422: server-side Pydantic rejection. Rare if client-side Ajv is in sync.
+    if (res.status === 422) throw new RPCParamsError(name, body);
+    throw new RPCHttpError(name, res.status, body);
+  }
   return res.json();
 }
 
@@ -90,20 +55,22 @@ function buildRPCCallback(metadata: RPCMetadata | undefined, name: string) {
     // Check if zmq function exists
     if (!metadata) throw new RPCNotFoundError(name);
 
+    const p = params ?? {};
+
     // Assert params data is valid against param schema
-    assertParamsValid(name, params ?? {}, metadata.params_schema);
+    assertParamsValid(name, p, metadata.params_schema);
 
     // Function to fetch data from the RPC endpoint
-    return callRPC(name, metadata.route, params);
+    return callRPC(name, metadata.route, p);
   };
 }
 
 // --------------------------------------------------------------------------------
-//  Hook
+//  Hooks
 // --------------------------------------------------------------------------------
 
 // ACTION hook: Wraps a mutation for user-triggered calls (forms, buttons)
-export const useRPCAction = <TResult = unknown, TParams = void>(name: string) => {
+export const useRPCAction = <TResult, TParams = void>(name: string) => {
   const rpcMetadata = useRPCsMetadata().data?.[name];
   const runRPC = buildRPCCallback(rpcMetadata, name);
 
@@ -125,7 +92,7 @@ export const useRPCAction = <TResult = unknown, TParams = void>(name: string) =>
 };
 
 // DATA hook: loads on mount for display (charts, panels). Wraps a query.
-export const useRPCData = <TResult = unknown, TParams = unknown>(name: string, params: TParams) => {
+export const useRPCData = <TResult, TParams = void>(name: string, params?: TParams) => {
   const rpcMetadata = useRPCsMetadata().data?.[name];
   const runRPC = buildRPCCallback(rpcMetadata, name);
 

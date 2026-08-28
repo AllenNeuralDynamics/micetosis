@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
-import { useConfig } from '../use-config';
+import { useConfig } from '@/hooks/use-config';
 
 // --------------------------------------------------------------------------------
 //  Schemas
@@ -57,25 +57,25 @@ export async function fetchStreamMetadata(url: string): Promise<StreamsMetadata>
 }
 
 // --------------------------------------------------------------------------------
-//  Hook
+//  Hooks
 // --------------------------------------------------------------------------------
 
 // Hook to fetch all RPC metadata
 export const useRPCsMetadata = () => {
-  const { rpcs_endpoint } = useConfig();
+  const { server } = useConfig();
   return useQuery<RPCsMetadata>({
-    queryKey: ['rpc-metadata', rpcs_endpoint],
-    queryFn: () => fetchRPCMetadata(rpcs_endpoint),
+    queryKey: ['rpc-metadata', server.rpcs_endpoint],
+    queryFn: () => fetchRPCMetadata(server.rpcs_endpoint),
     staleTime: Infinity, // RPC metadata is unlikely to change during a session
   });
 };
 
 // Hook to fetch all Stream metadata
 export const useStreamsMetadata = () => {
-  const { streams_endpoint } = useConfig();
+  const { server } = useConfig();
   return useQuery<StreamsMetadata>({
-    queryKey: ['stream-metadata', streams_endpoint],
-    queryFn: () => fetchStreamMetadata(streams_endpoint),
+    queryKey: ['stream-metadata', server.streams_endpoint],
+    queryFn: () => fetchStreamMetadata(server.streams_endpoint),
     staleTime: Infinity, // Streams metadata is unlikely to change during a session
   });
 };

@@ -1,5 +1,6 @@
 import addFormats from 'ajv-formats';
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
+import { RPCParamsError } from './errors.ts';
 import type { RPCMetadata } from './metadata.ts';
 
 // --------------------------------------------------------------------------------
@@ -10,18 +11,6 @@ import type { RPCMetadata } from './metadata.ts';
 const ajv = new Ajv2020({ allErrors: true, strict: 'log' });
 addFormats(ajv);
 const validators = new Map<string, ValidateFunction>();
-
-// --------------------------------------------------------------------------------
-//  Errors
-// --------------------------------------------------------------------------------
-
-// Custom RPC error for invalid parameters
-export class RPCParamsError extends Error {
-  constructor(rpcName: string, details: string) {
-    super(`Invalid params for "${rpcName}": ${details}`);
-    this.name = 'RPCParamsError';
-  }
-}
 
 // --------------------------------------------------------------------------------
 //  Validation Function

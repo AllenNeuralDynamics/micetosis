@@ -24,17 +24,19 @@ class ServerConfig(BaseModel):
     url: str = Field(default="http://localhost")
     port: int = Field(default=8000)
     router_client: RouterClientSettings = Field(default_factory=RouterClientSettings)
+    rpcs_endpoint: str = Field(default="/api/metadata/rpc")
+    streams_endpoint: str = Field(default="/api/metadata/streams")
 
 
-class UIConfig(BaseModel):
-    title: str = Field(default="Bar-seq")
-    rpcs_endpoint: str = Field(default="/api/rpc")
-    streams_endpoint: str = Field(default="/api/streams")
+class Widget(BaseModel):
+    type: str = Field(default="action")
+    bindings: dict[str, str] = Field(default_factory=dict)
 
 
 class Config(BaseModel):
+    title: str = Field(default="Micetosis")
     server: ServerConfig = Field(default_factory=ServerConfig)
-    ui: UIConfig = Field(default_factory=UIConfig)
+    widgets: dict[str, Widget] = Field(default_factory=dict)
 
 
 def load_config(path: Path | None = None) -> Config:

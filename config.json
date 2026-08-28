@@ -1,11 +1,32 @@
 {
-  "ui": {
-    "title": "Micetosis Template",
+  "title": "Micetosis Template",
+  "server": {
+    "url": "http://127.0.0.1",
+    "port": 8000,
     "rpcs_endpoint": "/api/metadata/rpcs",
     "streams_endpoint": "/api/metadata/streams"
   },
-  "server": {
-    "url": "http://127.0.0.1",
-    "port": 8000
+  "widgets": {
+    "facility1": {
+      "type": "MiceCloningFacility",
+      "bindings": {
+        "cloneMice": "clone_mice",
+        "checkCloneCount": "check_clone_count",
+        "executeOrder67": "execute_order_67",
+        "getManufacturerInfo": "get_manufacturer_info",
+        "getFaultyMachineInfo": "get_faulty_machine_info"
+      }
+    },
+    "facility2": {
+      "type": "MiceCloningFacility",
+      "bindings": {
+        "cloneMice": "clone_mice_2",
+        "checkCloneCount": "check_clone_count_2",
+        "executeOrder67": "execute_order_67_2",
+        "getManufacturerInfo": "get_manufacturer_info_2",
+        "getFaultyMachineInfo": "get_faulty_machine_info_2"
+      }
+    }
+
   }
 }
