@@ -23,6 +23,9 @@ Use it as scaffolding: keep the RPC plumbing, replace the example pages with ins
   - [Adapting the template](#adapting-the-template)
   - [Tooling](#tooling)
   - [Roadmap / known gaps](#roadmap--known-gaps)
+- [Diagrams](#diagrams)
+  - [Backend Flowchart](#backend-flowchart)
+  - [UI Flowchart](#ui-flowchart)
 
 ## Architecture
 
@@ -196,3 +199,35 @@ Nice-to-haves that are **not** wired up yet:
 - **CI.** No workflow files yet.
 - **Cookiecutter.** For scaffolding a fresh instrument UI without hand-renaming `web_ui_backend`.
 - **RPC HTTP verbs.** Every RPC is `POST`. If `RouterServer` ever reports read-only RPCs, wire that through `router_factory.py`.
+
+# Diagrams
+
+## Backend Flowchart
+
+```mermaid
+flowchart LR
+    A[Get RPC/Streams] --> B[Dynamically Generate Endpoints from RPCs]
+    B --> C[Generate Metadata Endpoints]
+```
+
+In regards to the contract in the config, the backend is responsible for verifying that the "required values" (RPC/Stream names) are valid.
+
+## UI Flowchart
+
+```mermaid
+flowchart LR
+    S1[Get streams] --> S2[Setup WebRTC connection]
+    S2 --> A[Get Config - GET /config]
+    A --> B[Validate contracts in config]
+    B --> C{Component exist in React?}
+    C -- No --> D[Warning, continue]
+    C -- Yes --> E{Required values match?}
+    E -- No --> F[Error]
+    E -- Yes --> G{Components has missing contract}
+    G -- Yes --> H[Error]
+    G -- No --> I[Done]
+```
+
+In regards to the contract in the config, the frontend is responsible for verifying each binding key has a corresponding component. Also that all components has a contract defined.
+
+The RPC hooks will now be responsible for mismatch parameter & network connection issues. It shouldn't ever fail because the endpoint doesn't exist...

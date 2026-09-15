@@ -11,10 +11,23 @@ const CONFIG_URL = '/api/config';
 //  Schemas
 // --------------------------------------------------------------------------------
 
-const ConfigSchema = z.object({
-  title: z.string().min(1),
+const ServerSchema = z.object({
+  url: z.string(),
+  port: z.number(),
   rpcs_endpoint: z.string(),
   streams_endpoint: z.string(),
+});
+
+// One entry per widget instance: which widget it is, plus its contract-key -> RPC-name bindings.
+const WidgetSchema = z.object({
+  type: z.string(),
+  bindings: z.record(z.string(), z.string()),
+});
+
+const ConfigSchema = z.object({
+  title: z.string(),
+  server: ServerSchema,
+  widgets: z.record(z.string(), WidgetSchema),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

@@ -40,7 +40,9 @@ export const ProviderErrorComponent = ({ error, resetErrorBoundary }: FallbackPr
             background: '#fdecec',
             color: '#7a1f1f',
             borderRadius: 4,
-            fontSize: 14,
+            fontSize: 13,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            whiteSpace: 'pre-wrap',
             overflow: 'auto',
           }}
         >
