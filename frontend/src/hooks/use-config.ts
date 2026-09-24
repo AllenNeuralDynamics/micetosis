@@ -16,6 +16,7 @@ const ServerSchema = z.object({
   port: z.number(),
   rpcs_endpoint: z.string(),
   streams_endpoint: z.string(),
+  offer_endpoint: z.string(),
 });
 
 // One entry per widget instance: which widget it is, plus its contract-key -> RPC-name bindings.

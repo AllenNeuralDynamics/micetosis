@@ -22,5 +22,6 @@ export const MiceCloningFacilityContract = {
     executeOrder67: { params: z.object({}), results: z.unknown(), kind: 'action' },
     getManufacturerInfo: { params: z.object({}), results: z.unknown(), kind: 'data' },
     getFaultyMachineInfo: { params: z.object({}), results: z.unknown(), kind: 'data' },
+    diceRoll: { results: z.number(), kind: 'channel' },
   },
 } as const;

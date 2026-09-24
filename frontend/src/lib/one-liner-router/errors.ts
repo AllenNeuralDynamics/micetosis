@@ -52,3 +52,62 @@ export class RPCNotFoundError extends RPCHttpError {
     this.name = 'RPCNotFoundError';
   }
 }
+
+// --------------------------------------------------------------------------------
+//  Binding validation
+// --------------------------------------------------------------------------------
+
+/**
+ * Errors thrown while checking expected widget bindings against backend metadata.
+ * Issues are kept structured so the UI can render them; `message` is only for logs.
+ */
+
+export type BindingIssue =
+  | { kind: 'unknown-rpc'; name: string }
+  | { kind: 'unknown-stream'; name: string }
+  | { kind: 'rpc-params-mismatch'; name: string; expected: unknown; actual: unknown }
+  | { kind: 'rpc-results-mismatch'; name: string; expected: unknown; actual: unknown }
+  | { kind: 'stream-results-mismatch'; name: string; expected: unknown; actual: unknown };
+
+export function formatBindingIssues(issues: readonly BindingIssue[]): string {
+  return issues
+    .map((issue) => {
+      switch (issue.kind) {
+        case 'unknown-rpc':
+          return `RPC "${issue.name}" is expected but not advertised by the backend.`;
+        case 'unknown-stream':
+          return `Stream "${issue.name}" is expected but not advertised by the backend.`;
+        case 'rpc-params-mismatch':
+          return (
+            `RPC "${issue.name}" params schema mismatch:\n` +
+            `  expected: ${JSON.stringify(issue.expected)}\n` +
+            `  actual:   ${JSON.stringify(issue.actual)}`
+          );
+        case 'rpc-results-mismatch':
+          return (
+            `RPC "${issue.name}" results schema mismatch:\n` +
+            `  expected: ${JSON.stringify(issue.expected)}\n` +
+            `  actual:   ${JSON.stringify(issue.actual)}`
+          );
+        case 'stream-results-mismatch':
+          return (
+            `Stream "${issue.name}" results schema mismatch:\n` +
+            `  expected: ${JSON.stringify(issue.expected)}\n` +
+            `  actual:   ${JSON.stringify(issue.actual)}`
+          );
+      }
+    })
+    .join('\n');
+}
+
+export class BindingValidationError extends Error {
+  readonly issues: readonly BindingIssue[];
+
+  constructor(issues: readonly BindingIssue[]) {
+    super(
+      `Binding validation failed with ${issues.length} issue(s):\n${formatBindingIssues(issues)}`,
+    );
+    this.name = 'BindingValidationError';
+    this.issues = issues;
+  }
+}

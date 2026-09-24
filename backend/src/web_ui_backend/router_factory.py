@@ -10,6 +10,7 @@ from web_ui_backend.metadata_model import (
     PeriodicStreamMetadata,
     StreamMetadata,
 )
+from web_ui_backend.webrtc import handle_offer
 
 
 def create_zmq_router(client: RouterClient) -> APIRouter:

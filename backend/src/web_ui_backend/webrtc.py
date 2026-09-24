@@ -30,21 +30,42 @@ def cancel_tasks() -> None:
     tasks.clear()
 
 
+################################################################################
+#
+#   Data channel utility functions
+#
+################################################################################
+
+
 def get_stream_poller(client: RouterClient, stream_name: str) -> zmq.asyncio.Poller:
+    # Ensure SUB socket is subscribed to the stream PUB socket.
     if stream_name not in client.stream_client.sub_sockets:
         client.configure_stream(stream_name, storage_type="cache")
+
+    # Wrap the SUB socket into a poller to efficiently wait for incoming messages.
     socket = client.stream_client.sub_sockets[stream_name]
     poller = zmq.asyncio.Poller()
     poller.register(socket, zmq.POLLIN)
+
     return poller
 
 
 async def stream_to_channel(client: RouterClient, channel: RTCDataChannel) -> None:
+    # Construct poller with the appropriate stream from the RouterClient (uses channel.label)
     poller = get_stream_poller(client, channel.label)
+
+    # Continuously poll the stream and send any received messages to the data channel
     while not stop_event.is_set():
         if dict(await poller.poll(timeout=1000)):
             _, msg = client.get_stream(channel.label)
             channel.send(json.dumps(msg))
+
+
+################################################################################
+#
+#   Video stream utility function
+#
+################################################################################
 
 
 class ZMQStreamTrack(VideoStreamTrack):
@@ -88,7 +109,15 @@ class ZMQStreamTrack(VideoStreamTrack):
             logger.error(e)
 
 
+################################################################################
+#
+#   Main offer handler
+#
+################################################################################
+
+
 async def handle_offer(client: RouterClient, request: Request) -> dict[str, str]:
+    # Clear any existing tasks before handling a new offer
     cancel_tasks()
     params = await request.json()
     pc = RTCPeerConnection()
@@ -96,21 +125,31 @@ async def handle_offer(client: RouterClient, request: Request) -> dict[str, str]
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange() -> None:
+        """
+        Handle changes in the WebRTC peer connection state.
+        Logs the new state and closes the connection if it has failed or been closed.
+        """
         logger.info(f"Peer connection state: {pc.connectionState}")
-        if pc.connectionState == "failed":
+        if pc.connectionState in ("failed", "closed"):
             await pc.close()
 
     @pc.on("datachannel")
     async def on_datachannel(channel: RTCDataChannel) -> None:
+        """
+        Handle the opening of a new data channel from the browser.
+        Creates a task that streams data. The name of the datachannel is used to find the
+        corresponding `RouterClient` stream to stream data from.
+        """
+        # TODO: check if stream.label exists in client streams
         tasks.append(asyncio.create_task(stream_to_channel(client, channel)))
 
-    for t in pc.getTransceivers():
-        if t.kind == "video":  # configure video sources
-            stream_name = params["transceiverMidMapping"][t.mid]
-            track = ZMQStreamTrack(client, stream_name)
-            relay = MediaRelay()
-            video = relay.subscribe(track)
-            pc.addTrack(video)
+    # for t in pc.getTransceivers():
+    #     if t.kind == "video":  # configure video sources
+    #         stream_name = params["transceiverMidMapping"][t.mid]
+    #         track = ZMQStreamTrack(client, stream_name)
+    #         relay = MediaRelay()
+    #         video = relay.subscribe(track)
+    #         pc.addTrack(video)
 
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)

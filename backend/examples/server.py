@@ -131,7 +131,7 @@ if __name__ == "__main__":
         "get_faulty_machine_info",
     )
 
-    # Add streams
+    # Add data stream
     print("Adding streams...")
     server.add_stream_from_callable(
         "dice_roll",

@@ -22,11 +22,13 @@ const contractDisplay = {
   slots: Object.fromEntries(
     Object.entries(MiceCloningFacilityContract.slots).map(([name, slot]) => [
       name,
-      {
-        kind: slot.kind,
-        params: z.toJSONSchema(slot.params),
-        results: z.toJSONSchema(slot.results),
-      },
+      slot.kind === 'channel'
+        ? { kind: slot.kind, results: z.toJSONSchema(slot.results) }
+        : {
+            kind: slot.kind,
+            params: z.toJSONSchema(slot.params),
+            results: z.toJSONSchema(slot.results),
+          },
     ]),
   ),
 };
@@ -42,6 +44,7 @@ export const MiceCloningFacilityView = ({
   executeOrder67,
   getManufacturerInfo,
   getFaultyMachineInfo,
+  diceRoll,
 }: MiceCloningFacilityProps) => {
   const [mouseName, setMouseName] = useState('Mickey');
   const [numOfClones, setNumOfClones] = useState<number>(2);
@@ -142,6 +145,12 @@ export const MiceCloningFacilityView = ({
                 {getFaultyMachineInfo.error && (
                   <Text c="red">{getFaultyMachineInfo.error.message}</Text>
                 )}
+              </Accordion.Panel>
+            </Accordion.Item>
+            <Accordion.Item value="Dice Roll">
+              <Accordion.Control>Dice Roll (stream)</Accordion.Control>
+              <Accordion.Panel>
+                <Text>Last roll: {diceRoll.data ?? '—'}</Text>
               </Accordion.Panel>
             </Accordion.Item>
           </Accordion>

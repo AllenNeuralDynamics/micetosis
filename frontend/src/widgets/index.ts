@@ -1,15 +1,16 @@
 export { MiceCloningFacility } from './MiceCloningFacility';
-import { MiceCloningFacility, MiceCloningFacilityContract } from './MiceCloningFacility';
+import { MiceCloningFacility } from './MiceCloningFacility';
 import type { WidgetContract } from './framework';
 
+// NOTE: this is where you register a widget, everything else is derived from this
 export const defaultWidgetRegistry = {
   MiceCloningFacility,
 } as const;
 
 export type DefaultWidgetType = keyof typeof defaultWidgetRegistry;
 
-// Widget type -> contract, used by binding validation to compare each slot's
-// declared schema against the actual RPC metadata schema.
-export const defaultWidgetContractRegistry: Readonly<Record<string, WidgetContract>> = {
-  [MiceCloningFacilityContract.type]: MiceCloningFacilityContract,
-};
+// Map of widget type to its contract
+export const defaultWidgetContractRegistry: Readonly<Record<string, WidgetContract>> =
+  Object.fromEntries(
+    Object.values(defaultWidgetRegistry).map((widget) => [widget.contract.type, widget.contract]),
+  );

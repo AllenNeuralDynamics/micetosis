@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { z } from 'zod';
 import { useConfig } from '@/hooks/use-config';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 
 // --------------------------------------------------------------------------------
 //  Schemas
@@ -63,7 +63,7 @@ export async function fetchStreamMetadata(url: string): Promise<StreamsMetadata>
 // Hook to fetch all RPC metadata
 export const useRPCsMetadata = () => {
   const { server } = useConfig();
-  return useQuery<RPCsMetadata>({
+  return useSuspenseQuery<RPCsMetadata>({
     queryKey: ['rpc-metadata', server.rpcs_endpoint],
     queryFn: () => fetchRPCMetadata(server.rpcs_endpoint),
     staleTime: Infinity, // RPC metadata is unlikely to change during a session
@@ -73,7 +73,7 @@ export const useRPCsMetadata = () => {
 // Hook to fetch all Stream metadata
 export const useStreamsMetadata = () => {
   const { server } = useConfig();
-  return useQuery<StreamsMetadata>({
+  return useSuspenseQuery<StreamsMetadata>({
     queryKey: ['stream-metadata', server.streams_endpoint],
     queryFn: () => fetchStreamMetadata(server.streams_endpoint),
     staleTime: Infinity, // Streams metadata is unlikely to change during a session

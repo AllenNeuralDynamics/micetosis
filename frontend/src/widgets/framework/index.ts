@@ -1,5 +1,10 @@
 export { useBoundResources } from './binding';
 export type { ResourcesForContract } from './binding';
-export type { SlotSpec, WidgetContract } from './contract';
+export type { RPCSlotSpec, SlotSpec, StreamSlotSpec, WidgetContract } from './contract';
 export { createWidget } from './create-widget';
 export type { WidgetProps } from './create-widget';
+export { formatSlotIssues, SlotValidationError } from './errors';
+export type { SlotIssue } from './errors';
+export { toActionResource, toChannelResource, toDataResource, toStreamResource } from './resources';
+export type { ActionResource, ChannelResource, DataResource, StreamResource } from './resources';
+export { validateSlotBindings } from './validate-slots';

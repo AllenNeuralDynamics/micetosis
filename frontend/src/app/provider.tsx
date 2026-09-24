@@ -1,40 +1,17 @@
-import { ProviderErrorComponent } from '@/components/errors/provider';
-import { useConfig } from '@/hooks/use-config';
-import { fetchRPCMetadata } from '@/lib/one-liner-router/metadata';
-import {
-  formatBindingIssues,
-  validateBindings,
-} from '@/lib/one-liner-router/validate-zmq-bindings';
+import { ErrorDispatch } from '@/components/errors/dispatch';
+import { GenericProviderLevelErrorView } from '@/components/errors/views/generic';
 import { theme } from '@/lib/mantine-theme';
 import { queryConfig } from '@/lib/react-query';
 import { defaultWidgetContractRegistry } from '@/widgets';
+import { BindingsGate } from '@/widgets/framework/binding-gate';
 import { Loader, MantineProvider } from '@mantine/core';
-import { QueryClient, QueryClientProvider, useSuspenseQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import * as React from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 
 type AppProviderProps = {
   children: React.ReactNode;
-};
-
-// Suspends on config + RPC metadata, then validates every widget instance's
-// bindings against its contract and the backend's RPC schemas. If anything is
-// wrong we throw so the ErrorBoundary above can display it.
-const BindingsGate = ({ children }: { children: React.ReactNode }) => {
-  const config = useConfig();
-  const { data: rpcs } = useSuspenseQuery({
-    queryKey: ['rpc-metadata', config.server.rpcs_endpoint],
-    queryFn: () => fetchRPCMetadata(config.server.rpcs_endpoint),
-    staleTime: Infinity,
-  });
-
-  const issues = validateBindings(config, defaultWidgetContractRegistry, rpcs);
-  if (issues.length > 0) {
-    throw new Error(`Widget binding validation failed:\n${formatBindingIssues(issues)}`);
-  }
-
-  return <>{children}</>;
 };
 
 export const AppProvider = ({ children }: AppProviderProps) => {
@@ -46,7 +23,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   );
 
   return (
-    <ErrorBoundary FallbackComponent={ProviderErrorComponent}>
+    <ErrorBoundary FallbackComponent={GenericProviderLevelErrorView}>
       <MantineProvider theme={theme}>
         <React.Suspense
           fallback={
@@ -57,7 +34,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         >
           <QueryClientProvider client={queryClient}>
             {import.meta.env.DEV && <ReactQueryDevtools />}
-            <BindingsGate>{children}</BindingsGate>
+            <ErrorBoundary FallbackComponent={ErrorDispatch}>
+              <BindingsGate registry={defaultWidgetContractRegistry}>{children}</BindingsGate>
+            </ErrorBoundary>
           </QueryClientProvider>
         </React.Suspense>
       </MantineProvider>

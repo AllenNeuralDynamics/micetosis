@@ -1,167 +1,224 @@
-import type { Config } from '@/hooks/use-config';
-import type { WidgetContract } from '@/widgets/framework';
 import { z } from 'zod';
-import type { RPCsMetadata } from './metadata';
+import { BindingValidationError, type BindingIssue } from './errors';
+import type { RPCsMetadata, StreamsMetadata } from './metadata';
 
-// Map of widget type -> contract. Provided by the app so validation can look
-// up the contract for each widget instance declared in the config.
-export type WidgetContractRegistry = Readonly<Record<string, WidgetContract>>;
+// --------------------------------------------------------------------------------
+//  Types
+// --------------------------------------------------------------------------------
 
-export type BindingIssue =
-  | { instanceId: string; widgetType: string; kind: 'unknown-widget-type' }
-  | { instanceId: string; widgetType: string; slot: string; kind: 'missing-slot-binding' }
-  | { instanceId: string; widgetType: string; slot: string; rpc: string; kind: 'unknown-rpc' }
-  | {
-      instanceId: string;
-      widgetType: string;
-      slot: string;
-      rpc: string;
-      kind: 'params-schema-mismatch';
-      expected: unknown;
-      actual: unknown;
-    }
-  | {
-      instanceId: string;
-      widgetType: string;
-      slot: string;
-      rpc: string;
-      kind: 'results-schema-mismatch';
-      expected: unknown;
-      actual: unknown;
-    };
+export type ExpectedRPC = {
+  name: string;
+  params: z.ZodType;
+  results: z.ZodType;
+};
 
-// JSON Schema keys we strip before comparing: pure metadata (title/description),
-// runtime concerns (default), and strictness markers that Pydantic and Zod
-// emit differently but that don't change the accepted shape for our purposes.
-const IGNORED_JSON_SCHEMA_KEYS = new Set([
+export type ExpectedStream = {
+  name: string;
+  results: z.ZodType;
+};
+
+type Json = Record<string, any>;
+
+type CompareResult = { match: true; extras: string[] } | { match: false };
+
+// --------------------------------------------------------------------------------
+//  Utility - comparing pydantic model vs zod model
+// --------------------------------------------------------------------------------
+
+const IGNORED = new Set([
   '$schema',
+  '$id',
+  '$comment',
   'title',
   'description',
   'default',
-  'additionalProperties',
+  'examples',
+  'deprecated',
+  'readOnly',
+  'writeOnly',
+  'discriminator',
+  'propertyNames',
 ]);
+const SCHEMA_MAPS = new Set(['properties', '$defs']);
+const SCHEMA_LISTS = new Set(['anyOf', 'prefixItems']);
+const SCHEMA_SINGLE = new Set(['items', 'additionalProperties']);
+const SAFE = Number.MAX_SAFE_INTEGER;
 
-function canonicalize(value: unknown): unknown {
-  if (value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.map(canonicalize);
-  const obj = value as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const key of Object.keys(obj).sort()) {
-    if (IGNORED_JSON_SCHEMA_KEYS.has(key)) continue;
-    let v = obj[key];
-    // JS has no separate integer type, so treat Pydantic's "integer" the same
-    // as Zod's "number" (and arrays like ["integer","null"] the same as
-    // ["number","null"]).
-    if (key === 'type') {
-      if (v === 'integer') v = 'number';
-      else if (Array.isArray(v)) v = v.map((t) => (t === 'integer' ? 'number' : t));
+export function compareSchemas(expected: z.ZodType, actual: Json): CompareResult {
+  let a: unknown;
+  try {
+    // Round-trip the JSON Schema through Zod so both sides come out of the same
+    // emitter: $refs resolved, allOf merged, nullability and integers written
+    // the same way. Unsupported keywords (e.g. `not`) throw -> no match.
+    a = canon(z.toJSONSchema(z.fromJSONSchema(actual as any), { io: 'input' }));
+  } catch {
+    return { match: false };
+  }
+  const e = canon(z.toJSONSchema(expected, { io: 'input' }));
+  const extras: string[] = [];
+  return subset(e, a, '$', extras) ? { match: true, extras } : { match: false };
+}
+
+// Remove the remaining cosmetic differences between the two emitted schemas.
+function canon(s: unknown): unknown {
+  if (!isObj(s)) return s;
+  const out: Json = Object.create(null);
+  for (const key of Object.keys(s)) {
+    if (IGNORED.has(key)) continue;
+    let v = s[key];
+    if (key === 'oneOf') {
+      out.anyOf = v.map(canon);
+      continue;
     }
-    out[key] = canonicalize(v);
+    if (key === 'type') v = Array.isArray(v) ? [...new Set(v.map(int2num))].sort() : int2num(v);
+    else if (key === 'enum')
+      v = [...v].sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y)));
+    else if (SCHEMA_MAPS.has(key))
+      v = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, canon(x)]));
+    else if (SCHEMA_LISTS.has(key)) v = v.map(canon);
+    else if (SCHEMA_SINGLE.has(key)) {
+      // `{}`, `true` and `false` here only say "open" or "closed"; drop them.
+      if (v === true || v === false || (isObj(v) && Object.keys(v).length === 0)) continue;
+      v = canon(v);
+    }
+    out[key] = v;
+  }
+  // An empty `properties` or `required` says nothing; drop so both sides agree.
+  if (isObj(out.properties) && Object.keys(out.properties).length === 0) delete out.properties;
+  if (Array.isArray(out.required) && out.required.length === 0) delete out.required;
+  // z.int() adds safe-integer bounds; z.number() doesn't. Treat them as equal.
+  if (s.type === 'integer' && out.minimum === -SAFE && out.maximum === SAFE) {
+    delete out.minimum;
+    delete out.maximum;
   }
   return out;
 }
 
-function schemasEqual(a: unknown, b: unknown): boolean {
-  return JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b));
+// `expected` must be contained in `actual`; actual may add properties/required.
+function subset(e: unknown, a: unknown, path: string, extras: string[]): boolean {
+  if (!isObj(e) || !isObj(a)) {
+    if (Array.isArray(e) && Array.isArray(a)) {
+      return e.length === a.length && e.every((x, i) => subset(x, a[i], `${path}[${i}]`, extras));
+    }
+    return JSON.stringify(e) === JSON.stringify(a);
+  }
+
+  const eKeys = Object.keys(e);
+  if (eKeys.length !== Object.keys(a).length || !eKeys.every((k) => Object.hasOwn(a, k)))
+    return false;
+
+  for (const key of eKeys) {
+    const ev = e[key],
+      av = a[key];
+    if (key === 'required') {
+      if (!ev.every((r: string) => av.includes(r))) return false;
+    } else if (key === 'properties') {
+      for (const p of Object.keys(ev)) {
+        if (!Object.hasOwn(av, p) || !subset(ev[p], av[p], `${path}.${p}`, extras)) return false;
+      }
+      for (const p of Object.keys(av)) if (!Object.hasOwn(ev, p)) extras.push(`${path}.${p}`);
+    } else if (key === 'anyOf') {
+      // Order-independent: pair each expected branch with a distinct actual branch.
+      if (ev.length !== av.length) return false;
+      const free = [...av];
+      for (const branch of ev) {
+        const i = free.findIndex((x) => subset(branch, x, path, []));
+        if (i < 0) return false;
+        subset(branch, free[i], path, extras);
+        free.splice(i, 1);
+      }
+    } else if (!subset(ev, av, `${path}.${key}`, extras)) {
+      return false;
+    }
+  }
+  return true;
 }
 
+const int2num = (t: unknown) => (t === 'integer' ? 'number' : t);
+const isObj = (v: unknown): v is Json => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+// --------------------------------------------------------------------------------
+//  Validator function
+// --------------------------------------------------------------------------------
+
 /**
- * Check that every widget instance in the config has a known widget type, that
- * every slot in the contract has a binding to a real RPC, and that the RPC's
- * params/return JSON schemas match the ones declared by the contract slot.
+ * For each expected RPC/stream, verify the backend advertises it and that its
+ * params/return JSON schemas match. Throws BindingValidationError listing every
+ * issue found; the caller can inspect `err.issues` for structured details.
+ *
+ * The caller owns how expectations are built (from widget contracts + config,
+ * from tests, etc.). This function only sees the flat list.
  */
 export function validateBindings(
-  config: Config,
-  contracts: WidgetContractRegistry,
+  expectedRPCs: readonly ExpectedRPC[],
+  expectedStreams: readonly ExpectedStream[],
   rpcs: RPCsMetadata,
-): BindingIssue[] {
+  streams: StreamsMetadata,
+): void {
   const issues: BindingIssue[] = [];
 
-  for (const [instanceId, widget] of Object.entries(config.widgets)) {
-    const contract = contracts[widget.type];
-    if (!contract) {
-      issues.push({ instanceId, widgetType: widget.type, kind: 'unknown-widget-type' });
+  const warnExtras = (label: string, extras: readonly string[]) => {
+    if (extras.length === 0) return;
+    console.warn(
+      `[validateBindings] ${label} advertises extra schema fields not in expected: ${extras.join(', ')}`,
+    );
+  };
+
+  // Check RPCS
+  for (const exp of expectedRPCs) {
+    const expectedParams = exp.params;
+    const expectedResults = exp.results;
+
+    const actual = rpcs[exp.name];
+    if (!actual) {
+      issues.push({ kind: 'unknown-rpc', name: exp.name });
       continue;
     }
-
-    for (const [slot, spec] of Object.entries(contract.slots)) {
-      const rpcName = widget.bindings[slot];
-      if (!rpcName) {
-        issues.push({
-          instanceId,
-          widgetType: widget.type,
-          slot,
-          kind: 'missing-slot-binding',
-        });
-        continue;
-      }
-
-      const rpc = rpcs[rpcName];
-      if (!rpc) {
-        issues.push({
-          instanceId,
-          widgetType: widget.type,
-          slot,
-          rpc: rpcName,
-          kind: 'unknown-rpc',
-        });
-        continue;
-      }
-
-      const expectedParams = z.toJSONSchema(spec.params);
-      const expectedResults = z.toJSONSchema(spec.results);
-
-      if (!schemasEqual(expectedParams, rpc.params_schema ?? {})) {
-        issues.push({
-          instanceId,
-          widgetType: widget.type,
-          slot,
-          rpc: rpcName,
-          kind: 'params-schema-mismatch',
-          expected: expectedParams,
-          actual: rpc.params_schema ?? null,
-        });
-      }
-      if (!schemasEqual(expectedResults, rpc.return_schema ?? {})) {
-        issues.push({
-          instanceId,
-          widgetType: widget.type,
-          slot,
-          rpc: rpcName,
-          kind: 'results-schema-mismatch',
-          expected: expectedResults,
-          actual: rpc.return_schema ?? null,
-        });
-      }
+    const paramsResult = compareSchemas(expectedParams, actual.params_schema ?? {});
+    if (!paramsResult.match) {
+      issues.push({
+        kind: 'rpc-params-mismatch',
+        name: exp.name,
+        expected: expectedParams,
+        actual: actual.params_schema ?? null,
+      });
+    } else {
+      warnExtras(`RPC "${exp.name}" params`, paramsResult.extras);
+    }
+    const resultsResult = compareSchemas(expectedResults, actual.return_schema ?? {});
+    if (!resultsResult.match) {
+      issues.push({
+        kind: 'rpc-results-mismatch',
+        name: exp.name,
+        expected: expectedResults,
+        actual: actual.return_schema ?? null,
+      });
+    } else {
+      warnExtras(`RPC "${exp.name}" results`, resultsResult.extras);
     }
   }
 
-  return issues;
-}
+  // Check Streams
+  for (const exp of expectedStreams) {
+    const expectedResults = exp.results;
 
-export function formatBindingIssues(issues: BindingIssue[]): string {
-  return issues
-    .map((issue) => {
-      switch (issue.kind) {
-        case 'unknown-widget-type':
-          return `[${issue.instanceId}] Unknown widget type "${issue.widgetType}" (not in the registry).`;
-        case 'missing-slot-binding':
-          return `[${issue.instanceId}] (${issue.widgetType}) Slot "${issue.slot}" has no binding in config.`;
-        case 'unknown-rpc':
-          return `[${issue.instanceId}] (${issue.widgetType}) Slot "${issue.slot}" is bound to RPC "${issue.rpc}", which is not in the metadata.`;
-        case 'params-schema-mismatch':
-          return (
-            `[${issue.instanceId}] (${issue.widgetType}) Slot "${issue.slot}" params schema mismatch for RPC "${issue.rpc}":\n` +
-            `  expected: ${JSON.stringify(issue.expected)}\n` +
-            `  actual:   ${JSON.stringify(issue.actual)}`
-          );
-        case 'results-schema-mismatch':
-          return (
-            `[${issue.instanceId}] (${issue.widgetType}) Slot "${issue.slot}" results schema mismatch for RPC "${issue.rpc}":\n` +
-            `  expected: ${JSON.stringify(issue.expected)}\n` +
-            `  actual:   ${JSON.stringify(issue.actual)}`
-          );
-      }
-    })
-    .join('\n');
+    const actual = streams[exp.name];
+    if (!actual) {
+      issues.push({ kind: 'unknown-stream', name: exp.name });
+      continue;
+    }
+    const resultsResult = compareSchemas(expectedResults, actual.return_schema ?? {});
+    if (!resultsResult.match) {
+      issues.push({
+        kind: 'stream-results-mismatch',
+        name: exp.name,
+        expected: expectedResults,
+        actual: actual.return_schema ?? null,
+      });
+    } else {
+      warnExtras(`Stream "${exp.name}" results`, resultsResult.extras);
+    }
+  }
+
+  if (issues.length > 0) throw new BindingValidationError(issues);
 }
