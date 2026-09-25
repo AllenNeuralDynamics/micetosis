@@ -3,7 +3,7 @@ import { GenericProviderLevelErrorView } from '@/components/errors/views/generic
 import { theme } from '@/lib/mantine-theme';
 import { queryConfig } from '@/lib/react-query';
 import { defaultWidgetContractRegistry } from '@/widgets';
-import { BindingsGate } from '@/widgets/framework/binding-gate';
+import { WidgetGate } from '@/widgets/framework/gate';
 import { Loader, MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -35,7 +35,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           <QueryClientProvider client={queryClient}>
             {import.meta.env.DEV && <ReactQueryDevtools />}
             <ErrorBoundary FallbackComponent={ErrorDispatch}>
-              <BindingsGate registry={defaultWidgetContractRegistry}>{children}</BindingsGate>
+              <WidgetGate registry={defaultWidgetContractRegistry}>{children}</WidgetGate>
             </ErrorBoundary>
           </QueryClientProvider>
         </React.Suspense>

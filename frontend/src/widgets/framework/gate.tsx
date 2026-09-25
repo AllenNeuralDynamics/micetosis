@@ -1,22 +1,22 @@
 import { useConfig } from '@/hooks/use-config';
-import { OneLinerProvider } from '@/lib/one-liner-router/one-liner-provider';
+import { OneLinerGate } from '@/lib/one-liner-router/gate';
 import type { ExpectedRPC, ExpectedStream } from '@/lib/one-liner-router/validate-zmq-bindings.ts';
 import type { WidgetContract } from './contract';
 import { validateSlotBindings } from './validate-slots';
 
-type BindingsGateProps = {
+type WidgetGateProps = {
   registry: Readonly<Record<string, WidgetContract>>;
   children: React.ReactNode;
 };
 
 /**
- * BindingGate is responsible for retrieving all unique slots from each widget's configuration
+ * WidgetGate is responsible for retrieving all unique slots from each widget's configuration
  * as well as the expected params/results schema from the widget's contract.
  *
  * The responsibility of this function is to retrieve all necessary WIDGET-related data
- * for the OneLinerProvider to perform validation and eventual binding.
+ * for the OneLinerGate to perform validation and eventual binding.
  */
-export const BindingsGate = ({ registry, children }: BindingsGateProps) => {
+export const WidgetGate = ({ registry, children }: WidgetGateProps) => {
   // Get config (mapping of slot resources to zmq call_names)
   const config = useConfig();
 
@@ -47,8 +47,8 @@ export const BindingsGate = ({ registry, children }: BindingsGateProps) => {
   }
 
   return (
-    <OneLinerProvider expectedRPCs={expectedRPCs} expectedStreams={expectedStreams}>
+    <OneLinerGate expectedRPCs={expectedRPCs} expectedStreams={expectedStreams}>
       {children}
-    </OneLinerProvider>
+    </OneLinerGate>
   );
 };
