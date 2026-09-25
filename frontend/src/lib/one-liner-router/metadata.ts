@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useConfig } from '@/hooks/use-config';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { z } from 'zod';
-import { useConfig } from '../use-config';
 
 // --------------------------------------------------------------------------------
 //  Schemas
@@ -19,8 +19,11 @@ export type RPCsMetadata = z.infer<typeof RPCsMetadataSchema>;
 
 export const StreamMetadataSchema = z.object({
   name: z.string(),
+  encoding: z.string(),
+  route: z.string(),
+  params_schema: z.record(z.string(), z.unknown()).nullish(),
+  return_schema: z.record(z.string(), z.unknown()).nullish(),
   description: z.string().nullish(),
-  schema: z.record(z.string(), z.unknown()).nullish(),
 });
 export type StreamMetadata = z.infer<typeof StreamMetadataSchema>;
 export const StreamsMetadataSchema = z.record(z.string(), StreamMetadataSchema);
@@ -54,25 +57,25 @@ export async function fetchStreamMetadata(url: string): Promise<StreamsMetadata>
 }
 
 // --------------------------------------------------------------------------------
-//  Hook
+//  Hooks
 // --------------------------------------------------------------------------------
 
 // Hook to fetch all RPC metadata
 export const useRPCsMetadata = () => {
-  const { rpcs_endpoint } = useConfig();
-  return useQuery<RPCsMetadata>({
-    queryKey: ['rpc-metadata', rpcs_endpoint],
-    queryFn: () => fetchRPCMetadata(rpcs_endpoint),
+  const { server } = useConfig();
+  return useSuspenseQuery<RPCsMetadata>({
+    queryKey: ['rpc-metadata', server.rpcs_endpoint],
+    queryFn: () => fetchRPCMetadata(server.rpcs_endpoint),
     staleTime: Infinity, // RPC metadata is unlikely to change during a session
   });
 };
 
 // Hook to fetch all Stream metadata
 export const useStreamsMetadata = () => {
-  const { streams_endpoint } = useConfig();
-  return useQuery<StreamsMetadata>({
-    queryKey: ['stream-metadata', streams_endpoint],
-    queryFn: () => fetchStreamMetadata(streams_endpoint),
+  const { server } = useConfig();
+  return useSuspenseQuery<StreamsMetadata>({
+    queryKey: ['stream-metadata', server.streams_endpoint],
+    queryFn: () => fetchStreamMetadata(server.streams_endpoint),
     staleTime: Infinity, // Streams metadata is unlikely to change during a session
   });
 };
