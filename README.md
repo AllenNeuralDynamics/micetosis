@@ -1,21 +1,21 @@
 # Instrument UI Template
 
-A starter template for building a **web UI in front of instrument software** that is already wired up to [`one-liner`](https://github.com/AllenNeuralDynamics/one-liner) and exposes a `RouterServer`.
+A starter template for building a **web UI** that seamlessly connects to a separate instrument software provisioned with [`one-liner`](https://github.com/AllenNeuralDynamics/one-liner). 
 
 The template gives you:
 
-- A **FastAPI backend** that spins up a `one-liner` `RouterClient` at startup, auto-discovers every RPC and stream exposed by the instrument, and turns them into typed HTTP endpoints (plus `/api/metadata/*` endpoints describing them).
-- A **React + TypeScript frontend** (Vite + Mantine + TanStack Router/Query + Tailwind) with a code-generated, type-safe client for every RPC — no manual endpoint wiring on either side.
-- A **single `config.json`** at the repo root that both sides read from.
-
-Use it as scaffolding: keep the RPC plumbing, replace the example pages with instrument-specific views.
-
+- A **FastAPI service** that spins up a `one-liner` `RouterClient` which connects to the instruments `one-liner` `RouterServer`; auto-discovers every RPC and stream exposed by the instrument, and turns them into typed HTTP endpoints for the webapp to interact with. 
+- A **React + TypeScript webapp** (Vite + Mantine + TanStack Router/Query + Tailwind) which utilizes a custom `widget` pattern that handles loading data from RPCs and streams.  
+- A **single `config.json`** to define what RPCs and streams to connect to what widgets. 
 
 ## Table of contents
 
 - [Instrument UI Template](#instrument-ui-template)
   - [Table of contents](#table-of-contents)
   - [Architecture](#architecture)
+    - [Instrument](#instrument)
+    - [Webapp - backend](#webapp---backend)
+    - [Webapp - frontend](#webapp---frontend)
   - [Prerequisites](#prerequisites)
   - [Quick start](#quick-start)
   - [Configuration](#configuration)
@@ -23,38 +23,46 @@ Use it as scaffolding: keep the RPC plumbing, replace the example pages with ins
   - [Adapting the template](#adapting-the-template)
   - [Tooling](#tooling)
   - [Roadmap / known gaps](#roadmap--known-gaps)
-- [Diagrams](#diagrams)
-  - [Backend Flowchart](#backend-flowchart)
-  - [UI Flowchart](#ui-flowchart)
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph Instrument["Instrument"]
-        RS[one-liner RouterServer<br/>ZMQ :5555 / :5556]
-    end
+### Instrument
 
-    subgraph Backend["FastAPI backend"]
-        RC[one-liner RouterClient]
-        API["/api/&lt;rpc_name&gt;<br/>/api/metadata/rpcs<br/>/api/metadata/streams<br/>/api/config"]
-    end
+This is a software with `one-liner` that exposes a `RouterServer`. The `RouterServer` is what handles exposing data & functions from the instrument server. This template provides an example server, remove before developing. 
 
-    subgraph Frontend["React SPA"]
-        Gen["Generated types<br/>+ typed hooks"]
-        UI[Mantine UI]
-    end
+### Webapp - backend
 
-    RS <-- ZMQ --> RC
-    RC --- API
-    API <-- HTTP --> Gen
-    Gen --- UI
+The backend is a fastAPI service that creates a `one-liner` `RouterClient` which connects to the `RouterServer` on the instrument. Connection details for the `RouterServer` can be defined in the `config.json`.
+
+The backend provides the following information to the webapp 
+
+- metadata about the RPCs/streams on the `RouterServer`.
+- `offer` endpoint to help establish webrtc connection between backend and frontend.
+- provides endpoints for each RPC with the function signature passed to the openapi spec.
+
+### Webapp - frontend
+
+The frontend has a single `config.json` where users can define widget instances.
+
+Widget Instance Example: 
+
+```json
+"<instance_name>": {  
+  "type": "<instance_type>"
+  "bindings": {
+    "<slot_1_name>": "<zmq_binding_1>"
+    "<slot_2_name>": "<zmq_binding_2>"
+  }
+}
 ```
 
-- The **instrument** already runs a `RouterServer` (this template does not start one).
-- The **backend** connects a `RouterClient` on startup, calls `get_rpc_configurations()` / `get_stream_configurations()`, and registers one `POST /api/<rpc_name>` route per RPC. Each route forwards `kwargs` through `client.call_by_name(...)`.
-- The **frontend** pulls `/api/metadata/rpcs` at build (or dev-server) time, generates a TypeScript endpoint map + JSON-Schema-based param validation, and exposes it through typed hooks.
+- Instance name: unique identifier for this widget
+- Widget type: type of widget. There is a registry defined in `frontend/src/widgets/index.ts` with a list of widget types. Each widget type has two main components:
+  - `view.tsx` which is a react UI component
+  - `contract.tsx` a definition of what slots the `view` needs to run
+- Bindings: a map of widget **slots** to the corresponding `one-liner` **call_name** or **zmq_binding**.
 
+Additional detail about the widget pattern can be found in the [widget.md](widget.md)
 
 ## Prerequisites
 
@@ -69,7 +77,7 @@ flowchart LR
 
 **2. Configure** — edit [config.json](config.json) at the repo root (see [Configuration](#configuration)).
 
-**3. Backend:**
+**3. Start Backend:**
 
 ```powershell
 cd backend
@@ -85,7 +93,7 @@ Optional flags:
 uv run python -m web_ui_backend.main --config path\to\config.json --log-level DEBUG
 ```
 
-**4. Frontend:**
+**4. Start Frontend:**
 
 ```powershell
 cd frontend
@@ -106,74 +114,63 @@ The single source of truth is [config.json](config.json) at the repo root:
 
 ```json
 {
-  "ui": {
-    "title": "Micetosis Template",
-    "rpcs_endpoint": "/api/metadata/rpcs",
-    "streams_endpoint": "/api/metadata/streams"
-  },
+  "title": "Example App Title",
   "server": {
     "url": "http://127.0.0.1",
-    "port": "8000"
-  }
+    "port": 8000,
+    "rpcs_endpoint": "/api/metadata/rpcs",
+    "streams_endpoint": "/api/metadata/streams",
+    "offer_endpoint": "/api/offer"
+  },
 }
-```
-
-- **`ui.*`** — forwarded to the browser via `GET /api/config`. Safe to expose (title, metadata endpoint paths, feature flags).
-- **`server.*`** — server-only. Never exposed to the browser. Extend this section with instrument-specific settings (ZMQ ports, database URIs, secrets, etc.).
-
-The backend loads and validates this file with Pydantic (see [backend/src/web_ui_backend/config.py](backend/src/web_ui_backend/config.py)). Missing fields fall back to model defaults; a missing file logs a warning and uses all defaults.
-
-To point the backend at a different file:
-
-```powershell
-uv run python -m web_ui_backend.main --config C:\path\to\other-config.json
 ```
 
 ## Repository layout
 
 ```
 .
-├── config.json                   # Shared runtime config (backend + frontend)
-├── backend/                      # FastAPI service (uv-managed)
+├── config.json                       # Shared runtime config (backend + frontend)
+├── backend/                          # FastAPI service (uv-managed)
+│   ├── pyproject.toml
 │   └── src/web_ui_backend/
-│       ├── main.py               # CLI entrypoint (uvicorn runner)
-│       ├── app.py                # FastAPI run entrypoint (debugging)
-│       ├── app_factory.py        # create_app(config) — wires middleware + routers
-│       ├── router_factory.py     # Maps RouterClient RPCs into FastAPI routes
-│       ├── config.py             # Config schema + load_config()
-│       └── metadata_model.py     # RPCMetadata / StreamMetadata schemas
-└── frontend/                     # Vite + React + TS
-    ├── scripts/
-    │   └── generate-rpc-types.mjs  # Fetches /api/metadata/rpcs → typed client
+│       ├── main.py                   # CLI entrypoint (uvicorn runner)
+│       ├── app.py                    # FastAPI run entrypoint (debugging)
+│       ├── app_factory.py            # create_app(config) — wires middleware + routers
+│       ├── router_factory.py         # Maps RouterClient RPCs into FastAPI routes
+│       ├── webrtc.py                 # WebRTC offer handling / stream transport
+│       ├── config.py                 # Config schema + load_config()
+│       └── metadata_model.py         # RPCMetadata / StreamMetadata schemas
+└── frontend/                         # Vite + React + TS
+    ├── index.html
     └── src/
-        ├── main.tsx
-        ├── app/                  # Root providers, router, top-level routes
-        ├── components/           # Reusable UI (layouts, ui/, errors/)
-        ├── features/             # Feature-scoped code (example/ is the demo)
+        ├── app/                      # Root providers, router, file-based routes
+        │   └── routes/               # Where page routes are created
+        ├── components/               # Reusable UI components
         ├── hooks/
-        │   ├── use-config.ts     # Reads /api/config
-        │   └── one-liner-router/ # RPC client + generated types
-        │       ├── call-rpc.ts   # fetch wrapper + error classes
-        │       ├── typed-hooks.ts# useRPCAction / useRPCData facade
-        │       ├── validation.ts # Ajv JSON-Schema validation
-        │       ├── registry.ts   # Metadata registry hooks
-        │       ├── index.ts      # Public barrel
-        │       └── generated/    # ⚙️ Codegen output (do not hand-edit)
-        └── lib/                  # mantine-theme, react-query client
+        │   └── use-config.ts         # Reads /api/config
+        ├── lib/
+        │   ├── one-liner-router/     # One-liner related hooks & functions
+        │   └── webrtc/               # WebRTC client + stream provider
+        └── widgets/
+            ├── index.ts              # Widget type registry
+            ├── framework/            # Widget main engine 
+            └── MiceCloningFacility/  # Example widget
+                ├── contract.ts
+                ├── view.tsx
+                └── index.ts
 ```
 
 The project loosely follows the [bulletproof-react](https://github.com/alan2207/bulletproof-react) structure (`app/`, `features/`, `components/`, `hooks/`, `lib/`).
 
 ## Adapting the template
 
-The template ships with a demo route at `/example` showing all pieces working end-to-end (metadata inspection, fixed-name RPC action/data calls, generic RPC caller). To turn this into your own instrument UI:
+1. **Point at your instrument**: Update `config.json` to point at the new `RouterServer`
 
-1. **Point at your instrument.** Update `config.json` (`server.router_client.*`) so the backend can connect. Restart the backend.
-2. **Regenerate RPC types.** `npm run gen:rpc`. The `generated/` folder will now reflect your RPCs.
-3. **Delete the demo feature.** Remove [frontend/src/features/example](frontend/src/features/example) and the `example.tsx` route.
-4. **Add your own features.** Create `src/features/<your-feature>/components/` and a matching file-based route in `src/app/routes/`. Use `useRPCAction` / `useRPCData` with your generated RPC names — autocomplete and typechecking work out of the box.
-5. **Theme.** Adjust `frontend/src/lib/mantine-theme.ts` and Tailwind config; swap the logo in [frontend/src/app/routes/index.tsx](frontend/src/app/routes/index.tsx).
-6. **Rename the Python package.** `web_ui_backend` is generic — rename to something instrument-specific if you plan to publish (cookiecutter support is on the [roadmap](#roadmap--known-gaps)).
+2. **Widgets**: Replace and create your own widgets ([widgets.md](widgets.md) has details on how to do this).
+
+3. **Routes**: Replace and create your own route 
+
+4. **Rename the Python package.** `web_ui_backend` is generic — rename to something instrument-specific if you plan to publish (cookiecutter support is on the [roadmap](#roadmap--known-gaps)).
 
 ## Tooling
 
@@ -193,41 +190,7 @@ The template ships with a demo route at `/example` showing all pieces working en
 Nice-to-haves that are **not** wired up yet:
 
 - **Static-file serving in production.** `main.py` has a stubbed `serve_static_frontend(app)` — needs a proper build-and-embed step (and to be renamed away from `prototome_web_ui`).
-- **Streams transport.** Metadata is exposed; wiring `/api/streams/<name>` over WebSocket / WebRTC (backend already depends on `aiortc`) is TODO.
-- **`config.json` polish.** `server.port` is a string; should be `number`. Backend `Config.model_validate_json` currently accepts it because Pydantic coerces, but tighten this.
 - **Testing.** No test scaffolding yet — plan is Vitest + React Testing Library + MSW for the frontend, pytest for the backend.
 - **CI.** No workflow files yet.
 - **Cookiecutter.** For scaffolding a fresh instrument UI without hand-renaming `web_ui_backend`.
 - **RPC HTTP verbs.** Every RPC is `POST`. If `RouterServer` ever reports read-only RPCs, wire that through `router_factory.py`.
-
-# Diagrams
-
-## Backend Flowchart
-
-```mermaid
-flowchart LR
-    A[Get RPC/Streams] --> B[Dynamically Generate Endpoints from RPCs]
-    B --> C[Generate Metadata Endpoints]
-```
-
-In regards to the contract in the config, the backend is responsible for verifying that the "required values" (RPC/Stream names) are valid.
-
-## UI Flowchart
-
-```mermaid
-flowchart LR
-    S1[Get streams] --> S2[Setup WebRTC connection]
-    S2 --> A[Get Config - GET /config]
-    A --> B[Validate contracts in config]
-    B --> C{Component exist in React?}
-    C -- No --> D[Warning, continue]
-    C -- Yes --> E{Required values match?}
-    E -- No --> F[Error]
-    E -- Yes --> G{Components has missing contract}
-    G -- Yes --> H[Error]
-    G -- No --> I[Done]
-```
-
-In regards to the contract in the config, the frontend is responsible for verifying each binding key has a corresponding component. Also that all components has a contract defined.
-
-The RPC hooks will now be responsible for mismatch parameter & network connection issues. It shouldn't ever fail because the endpoint doesn't exist...
