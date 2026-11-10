@@ -17,6 +17,10 @@ export type ExpectedStream = {
   results: z.ZodType;
 };
 
+export type ExpectedMediaStream = ExpectedStream & {
+  kind: 'video' | 'audio';
+}
+
 type Json = Record<string, any>;
 
 type CompareResult = { match: true; extras: string[] } | { match: false };

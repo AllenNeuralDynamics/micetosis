@@ -143,9 +143,10 @@ async def handle_offer(client: RouterClient, request: Request) -> dict[str, str]
         # TODO: check if stream.label exists in client streams
         tasks.append(asyncio.create_task(stream_to_channel(client, channel)))
 
+    # mid_to_name = {m["mid"]: m["name"] for m in params.get("media", [])}
     # for t in pc.getTransceivers():
     #     if t.kind == "video":  # configure video sources
-    #         stream_name = params["transceiverMidMapping"][t.mid]
+    #         stream_name = mid_to_name[t.mid]
     #         track = ZMQStreamTrack(client, stream_name)
     #         relay = MediaRelay()
     #         video = relay.subscribe(track)

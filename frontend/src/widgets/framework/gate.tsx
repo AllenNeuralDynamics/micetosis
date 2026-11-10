@@ -1,6 +1,10 @@
 import { useConfig } from '@/hooks/use-config';
 import { OneLinerGate } from '@/lib/one-liner-router/gate';
-import type { ExpectedRPC, ExpectedStream } from '@/lib/one-liner-router/validate-zmq-bindings.ts';
+import type {
+  ExpectedMediaStream,
+  ExpectedRPC,
+  ExpectedStream,
+} from '@/lib/one-liner-router/validate-zmq-bindings.ts';
 import type { WidgetContract } from './contract';
 import { validateSlotBindings } from './validate-slots';
 
@@ -20,7 +24,7 @@ export const WidgetGate = ({ registry, children }: WidgetGateProps) => {
   // Get config (mapping of slot resources to zmq call_names)
   const config = useConfig();
 
-  const expectedStreams: Array<ExpectedStream> = [];
+  const expectedStreams: Array<ExpectedStream | ExpectedMediaStream> = [];
   const expectedRPCs: Array<ExpectedRPC> = [];
 
   validateSlotBindings(registry, config.widgets);
@@ -35,12 +39,17 @@ export const WidgetGate = ({ registry, children }: WidgetGateProps) => {
           params: slotSpec.params,
           results: slotSpec.results,
         });
-
         // TODO: need to handle video too
-      } else if (slotSpec.kind === 'channel' || slotSpec.kind === 'video') {
+      } else if (slotSpec.kind === 'channel') {
         expectedStreams.push({
           name: widget.bindings[slot],
           results: slotSpec.results,
+        });
+      } else if (slotSpec.kind === 'video') {
+        expectedStreams.push({
+          name: widget.bindings[slot],
+          results: slotSpec.results,
+          kind: 'video',
         });
       }
     }

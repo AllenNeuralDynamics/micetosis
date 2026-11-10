@@ -1,10 +1,49 @@
 # Widget
 
+- [Widget](#widget)
+  - [Overview](#overview)
+    - [Slot Types](#slot-types)
+    - [Example](#example)
+  - [Creating A Widget](#creating-a-widget)
+    - [View](#view)
+    - [Slots](#slots)
+    - [Config](#config)
+    - [Contract](#contract)
+    - [Update View](#update-view)
+    - [Widget Registry \& Creation](#widget-registry--creation)
+    - [Usage](#usage)
+  - [Diagrams](#diagrams)
+
+![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
+
+## Overview 
+
 Components of a widget: 
 
+- Slots: labels for "props" (parameters) the `View` expects, and are eventually bind to their corresponding ZMQ function.
 - View: pure UI component (isolated from the widget & `one-liner` details), accepts `Slots` as prop parameters.
-- Contract: definitions of `Slots` that the view expects.
-- Slots: labels for props the `View` expects and are eventually bind to their corresponding ZMQ function.
+- Contract: definitions of `Slots` that the view expects (prop to ZMQ call name mapping).
+
+![widget](assets/widget-component.svg)
+
+### Slot Types
+
+There are 4 kinds of slot types: 
+
+1) **action** action RPC (generally used as action - RPC call when a button is pressed)
+2) **data:** data RPC (generally used to fetch data - loads data when UI initially loads)
+3) **chanel:** generic data stream
+4) **video:** video stream
+
+### Example
+
+Look at the ``MiceCloningFacility`` in ``frontned/src/widgets/MiceCloningFacility/`` for a full example. The files to pay attention to are: 
+
+- Config: ``config.json`` in root folder
+- Contract: ``MiceCloningFacility/contract.ts``
+- View: ``MiceCloningFacility/view.tsx`` 
+
+![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
 ## Creating A Widget
 
@@ -192,6 +231,8 @@ function HomePage() {
   );
 }
 ```
+
+![-----------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png)
 
 ## Diagrams
 

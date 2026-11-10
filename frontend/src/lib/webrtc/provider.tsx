@@ -60,7 +60,7 @@ export function useTransport(): TransportApi {
 export interface WebRTCProviderProps {
   signalingUrl: string;
   channels?: ChannelInit[];
-  media?: MediaSpec;
+  media?: MediaSpec[];
   iceServers?: RTCIceServer[];
   enabled?: boolean;
   children: React.ReactNode;

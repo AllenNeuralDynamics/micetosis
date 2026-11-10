@@ -1,13 +1,14 @@
 import { useConfig } from '@/hooks/use-config.ts';
 import { WebRTCProvider } from '../webrtc/provider.tsx';
+import type { MediaSpec } from '../webrtc/types.ts';
 import { useRPCsMetadata, useStreamsMetadata } from './metadata';
-import type { ExpectedRPC, ExpectedStream } from './validate-zmq-bindings.ts';
+import type { ExpectedMediaStream, ExpectedRPC, ExpectedStream } from './validate-zmq-bindings.ts';
 import { validateBindings } from './validate-zmq-bindings.ts';
 
 interface OneLinerGateProps {
   children: React.ReactNode;
   expectedRPCs: ExpectedRPC[];
-  expectedStreams: ExpectedStream[];
+  expectedStreams: (ExpectedStream | ExpectedMediaStream)[];
 }
 
 /**
@@ -16,11 +17,7 @@ interface OneLinerGateProps {
  *  - Validate expected RPC/Streams exist
  *  - Setup WebRTC connections for the validated streams if necessary
  */
-export const OneLinerGate = ({
-  children,
-  expectedRPCs,
-  expectedStreams,
-}: OneLinerGateProps) => {
+export const OneLinerGate = ({ children, expectedRPCs, expectedStreams }: OneLinerGateProps) => {
   // Get list of available RPCs and streams from RouterServer
   const { data: rpcs } = useRPCsMetadata();
   const { data: streams } = useStreamsMetadata();
@@ -28,8 +25,20 @@ export const OneLinerGate = ({
 
   validateBindings(expectedRPCs, expectedStreams, rpcs ?? {}, streams ?? {});
 
+  const isMedia = (s: ExpectedStream | ExpectedMediaStream): s is ExpectedMediaStream =>
+    'kind' in s;
+
+  // Several widgets may bind the same stream; negotiate each only once.
+  const channels = [...new Set(expectedStreams.filter((s) => !isMedia(s)).map((s) => s.name))];
+
+  const media: MediaSpec[] = [
+    ...new Map(
+      expectedStreams.filter(isMedia).map((s) => [s.name, { kind: s.kind, name: s.name }]),
+    ).values(),
+  ];
+
   return (
-    <WebRTCProvider signalingUrl={config.server.offer_endpoint} channels={['dice_roll']}>
+    <WebRTCProvider signalingUrl={config.server.offer_endpoint} channels={channels} media={media}>
       {children}
     </WebRTCProvider>
   );
