@@ -60,10 +60,10 @@ The project loosely follows the [bulletproof-react](https://github.com/alan2207/
 
 ## Typed RPC hooks
 
-Two hooks form the public API — see [src/hooks/one-liner-router/typed-hooks.ts](src/hooks/one-liner-router/typed-hooks.ts):
+Two hooks form the public API — see [src/lib/one-liner-router/typed-hooks.ts](src/lib/one-liner-router/typed-hooks.ts):
 
 ```ts
-import { useRPCAction, useRPCData } from '@/hooks/one-liner-router';
+import { useRPCAction, useRPCData } from '@/lib/one-liner-router';
 
 // Mutation-style: fire-and-forget RPC call
 const changeTune = useRPCAction('change_tune');
@@ -85,7 +85,7 @@ If every field on the params type is optional, you can call `useRPCData('get_dan
 
 ## Errors
 
-[`call-rpc.ts`](src/hooks/one-liner-router/call-rpc.ts) defines a small taxonomy:
+[`call-rpc.ts`](src/lib/one-liner-router/call-rpc.ts) defines a small taxonomy:
 
 - `RPCNotFoundError` — RPC name not in the metadata registry.
 - `RPCFetchError` — abstract base (never thrown directly).
@@ -105,7 +105,7 @@ npm run gen:rpc
 Under the hood ([scripts/generate-rpc-types.mjs](scripts/generate-rpc-types.mjs)):
 
 1. `GET http://localhost:8000/api/metadata/rpcs`.
-2. For each RPC, run `json-schema-to-typescript` on `params_schema` and `return_schema` → one file per RPC in [src/hooks/one-liner-router/generated/](src/hooks/one-liner-router/generated/).
+2. For each RPC, run `json-schema-to-typescript` on `params_schema` and `return_schema` → one file per RPC in [src/lib/one-liner-router/generated/](src/lib/one-liner-router/generated/).
 3. Emit a top-level `endpoints.ts` containing:
    - `RPCEndpoints` — `{ [rpcName]: { params, result } }`
    - `RPCName = keyof RPCEndpoints`

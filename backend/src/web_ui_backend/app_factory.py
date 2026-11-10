@@ -37,7 +37,7 @@ def create_app(config=load_config()) -> FastAPI:
     @app.get("/api/config", tags=["Config"])
     def get_config() -> dict[str, Any]:
         """Get UI config."""
-        return config.ui.model_dump()
+        return config.model_dump()
 
     # TODO: this will hang if router server isn't spun up. Should we timeout
     # Also, we get 502 gateway error in the UI, probably catch the hang and notify UI that 

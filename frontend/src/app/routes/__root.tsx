@@ -1,4 +1,3 @@
-import { RouteErrorComponent } from '@/components/errors/route';
 import { useConfig } from '@/hooks/use-config';
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
@@ -7,7 +6,6 @@ import { useEffect } from 'react';
 export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
-  errorComponent: RouteErrorComponent,
 });
 
 function RootComponent() {

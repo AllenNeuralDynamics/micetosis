@@ -1,5 +1,5 @@
 import jsonref
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from typing import Any
 
@@ -10,6 +10,7 @@ from web_ui_backend.metadata_model import (
     PeriodicStreamMetadata,
     StreamMetadata,
 )
+from web_ui_backend.webrtc import handle_offer
 
 
 def create_zmq_router(client: RouterClient) -> APIRouter:
@@ -77,6 +78,11 @@ def create_zmq_router(client: RouterClient) -> APIRouter:
         """Get metadata for all streams."""
         return stream_metadata
 
+    # Add webRTC offer endpoint
+    @router.post("/offer")
+    async def offer(request: Request) -> dict[str, str]:
+        return await handle_offer(client, request)
+
     return router
 
 
@@ -124,7 +130,6 @@ def _add_rpc_endpoint_to_router(
                 },
             },
         }
-
 
     router.add_api_route(
         f"/{call_name}",
